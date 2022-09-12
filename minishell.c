@@ -3,20 +3,20 @@
 /*                                                        :::      ::::::::   */
 /*   minishell.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ctardy <ctardy@student.42nice.fr>          +#+  +:+       +#+        */
+/*   By: jcauchet <jcauchet@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/06/08 18:39:13 by jcauchet          #+#    #+#             */
-/*   Updated: 2022/07/05 16:35:39 by ctardy           ###   ########.fr       */
+/*   Created: 2022/08/09 18:17:23 by jcauchet          #+#    #+#             */
+/*   Updated: 2022/08/25 15:22:18 by jcauchet         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "includes/minishell.h"
 
-t_global *g_global;
+t_global	*g_glob;
 
 int	return_and_free(void)
 {
-	free(g_global->prompt);
+	free(g_glob->prompt);
 	return (STOP);
 }
 
@@ -24,18 +24,37 @@ int	return_and_free(void)
 Uses global variable to checkk if SIGINT was used. Checks if CTRL-D has
 been typed by checking args value (NULL when you type CTRL-D)
 ***************************************************************************/
-int stop_check(char *args, char *prompt)
+int	stop_check(char *args, char *prompt)
 {
 	if (!args)
 	{
-		write (1, "\r", 1);
-		printf("%s", prompt);
-		printf("exit\n");
+		if (!g_glob->env)
+			ft_putstr_fd("\n\033[1A", 1);
+		else if (!g_glob->env->path[0])
+			ft_putstr_fd("\n\033[1A", 1);
+		else
+			ft_putstr_fd("\033[1A", 1);
+		ft_putstr_fd(prompt, 1);
+		ft_putstr_fd("exit\n", 1);
 		return (STOP);
 	}
 	if (!strncmp(args, "exit", 4) && ft_strlen(args) == 4)
 		return (STOP);
 	return (CONTINUE);
+}
+
+int	empty_args(char *args)
+{
+	int	i;
+
+	i = 0;
+	while (args[i])
+	{
+		if ((args[i] != ' ') && ((args[i] < 9) || (args[i] > 13)))
+			return (0);
+		i++;
+	}
+	return (1);
 }
 
 /***************************************************************************
@@ -46,27 +65,45 @@ int	req_args(void)
 {
 	char	*args;
 
-	while (1)
+	while ("Minishell Sardou")
 	{
-		g_global->prompt = create_prompt();
-		args = readline(g_global->prompt);	
-		if (ft_strlen(args))
+		g_glob->prompt = ft_strdup("minishell$ ");
+		unset_escape_handling();
+		args = readline(g_glob->prompt);
+		set_escape_handling();
+		if (ft_strlen(args) && not_only_spaces(args))
 			add_history(args);
-		if (stop_check(args, g_global->prompt) == STOP)
-			return(return_and_free());
-		free(g_global->prompt);
-		parsing(args);
+		if (stop_check(args, g_glob->prompt) == STOP)
+		{
+			free(args);
+			return (return_and_free());
+		}
+		free(g_glob->prompt);
+		if (empty_args(args))
+		{
+			free(args);
+			continue ;
+		}
+		lexer(args);
+		free(args);
 	}
 }
 
-int	main(int ac, char **av, char **env)
+int	main(int argc, char **argv, char **env)
 {
-	(void)ac;
-	(void)av;
-	(void)env;
-	g_global = malloc(sizeof(t_global));
+	(void)argc;
+	(void)argv;
+	g_glob = malloc(sizeof(t_global));
+	if (!g_glob)
+		return (1);
+	g_glob->code = 0;
 	signal_init();
+	return_list(env);
 	req_args();
-	free(g_global);
+	free_list_end(g_glob->env, g_glob->env_sorted, 2);
+	free(g_glob->cur_path);
+	free(g_glob);
+	system("leaks minishell");
+	exit(1);
 	return (0);
 }

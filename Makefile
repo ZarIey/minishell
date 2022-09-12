@@ -9,15 +9,13 @@ NAME = minishell
 
 PROJECT = MINISHELL
 
-SRCS =	minishell.c \
-		list_env.c  \
-		$(addprefix srcs/prompt/, prompt.c) \
-		$(addprefix srcs/signals/, signals.c) \
-		$(addprefix srcs/lexer/, lexer.c) \
-		$(addprefix srcs/parser/, parser.c) \
-		$(addprefix srcs/commands/, commands.c) \
-		$(addprefix srcs/builtins/, pwd.c unset.c env.c exit.c cd.c echo.c export.c) \
-		$(addprefix includes/gnl/, get_next_line.c get_next_line_utils.c) \
+SRCS = minishell.c \
+		$(addprefix srcs/signals/, signals.c exit_code.c) \
+		$(addprefix srcs/lexer/, lexer.c lexer_elmt_utils.c find_type.c char_handling.c) \
+		$(addprefix srcs/parser/, parser.c quote_handling.c find_next_quote.c var_handling.c pipe_handling.c q_tokens_handling.c) \
+		$(addprefix srcs/redirections/, redirections_errors.c redirections_handling.c redirections_utils.c heredoc_redirections.c input_redirections.c output_redirections.c recreate_and_exec.c) \
+		$(addprefix srcs/builtins/, free_list.c pwd.c unset.c unset_utils.c env.c exit.c cd.c echo.c export.c export_utils.c list_env.c list_env_utils.c set_build.c print.c cd_utils.c echo_utils.c export_init.c export_add.c) \
+		$(addprefix srcs/execution/, execution.c finders.c) \
 
 OBJS = $(SRCS:.c=.o)
 
@@ -51,6 +49,7 @@ rl:
 	@sh req.sh
 	@rm -rf t
 	@rm -rf req.sh
+	@stty -echoctl
 
 .c.o: $(SRCS)
 	@make rl
@@ -59,8 +58,11 @@ rl:
 
 $(NAME): $(OBJS)
 	@make bonus -C includes/libft/
-	@gcc $(CFLAGS) $(HEADER) -o $(NAME) -L includes/libft -lft $(SRCS) -L includes/readline/lib -lreadline
+	@gcc $(CFLAGS) $(HEADER) -o $(NAME) -L includes/libft -lft $(SRCS) -lreadline -L./includes/readline/lib -lncurses
 	@printf $(GREEN)"\r\033[K✅ SUCCESS: "$(WHITE)$(NAME)$(GREEN)" has been created\n"$(RESET)
+
+$(NAME)_sanitize: $(SRCS)
+	@gcc $(CFLAGS) -fsanitize=address -g $(HEADER) -o $(NAME)_sanitize -L includes/libft -lft $(SRCS) -lreadline -L./includes/readline/lib -lncurses
 
 clean:
 	@rm -rf $(OBJS) 
